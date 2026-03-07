@@ -14,24 +14,8 @@ const TransformationVisualizer: React.FC<TransformationVisualizerProps> = ({ fun
   const [progress, setProgress] = useState(0);
   const [isAnimating, setIsAnimating] = useState(true);
 
-  useEffect(() => {
-    let interval: any;
-    if (isAnimating) {
-      interval = setInterval(() => {
-        setProgress((p) => (p >= 1 ? 0 : p + 0.005));
-      }, 20);
-    }
-    return () => clearInterval(interval);
-  }, [isAnimating]);
-
-  const generateGrid = (t: number) => {
-    const size = 15;
-    const range = 2;
-    const x = Array.from({ length: size }, (_, i) => -range + (i * (range * 2)) / (size - 1));
-    const y = Array.from({ length: size }, (_, i) => -range + (i * (range * 2)) / (size - 1));
-    
-    const traces: any[] = [];
-
+  // Pre-compile the function once when functionStr changes
+  const compiledFunction = useMemo(() => {
     try {
       const node = math.parse(functionStr);
       const zSub = math.parse('(x + i * y)');
@@ -39,62 +23,130 @@ const TransformationVisualizer: React.FC<TransformationVisualizerProps> = ({ fun
         if ((n as any).isSymbolNode && (n as any).name === 'z') return zSub;
         return n;
       });
-      const code = substituted.compile();
-
-      const getPoint = (xVal: number, yVal: number) => {
-        const scope = { x: xVal, y: yVal, i: math.complex(0, 1) };
-        const val = code.evaluate(scope);
-        const re = val.re ?? val;
-        const im = val.im ?? 0;
-        // Interpolate: (1-t)z + t*f(z)
-        return {
-          x: (1 - t) * xVal + t * re,
-          y: (1 - t) * yVal + t * im
-        };
-      };
-
-      // Horizontal lines
-      for (let i = 0; i < size; i++) {
-        const lineX: number[] = [];
-        const lineY: number[] = [];
-        for (let j = 0; j < size; j++) {
-          const p = getPoint(x[j], y[i]);
-          lineX.push(p.x);
-          lineY.push(p.y);
-        }
-        traces.push({
-          x: lineX, y: lineY,
-          type: 'scatter', mode: 'lines',
-          line: { color: 'rgba(79, 70, 229, 0.4)', width: 1 },
-          showlegend: false, hoverinfo: 'none'
-        });
-      }
-
-      // Vertical lines
-      for (let j = 0; j < size; j++) {
-        const lineX: number[] = [];
-        const lineY: number[] = [];
-        for (let i = 0; i < size; i++) {
-          const p = getPoint(x[j], y[i]);
-          lineX.push(p.x);
-          lineY.push(p.y);
-        }
-        traces.push({
-          x: lineX, y: lineY,
-          type: 'scatter', mode: 'lines',
-          line: { color: 'rgba(16, 185, 129, 0.4)', width: 1 },
-          showlegend: false, hoverinfo: 'none'
-        });
-      }
+      return substituted.compile();
     } catch (e) {
-      console.error(e);
+      console.error("Compilation error:", e);
+      return null;
+    }
+  }, [functionStr]);
+
+  const [revision, setRevision] = useState(0);
+
+  useEffect(() => {
+    let animationFrame: number;
+    let lastTime = performance.now();
+
+    const animate = (time: number) => {
+      if (isAnimating) {
+        const deltaTime = time - lastTime;
+        lastTime = time;
+        // Adjust speed: 0.2 units per second
+        setProgress((p) => {
+          const next = p >= 1 ? 0 : p + (deltaTime / 5000);
+          setRevision(r => r + 1);
+          return next;
+        });
+      } else {
+        lastTime = time;
+      }
+      animationFrame = requestAnimationFrame(animate);
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [isAnimating]);
+
+  // Pre-calculate the grid points once when compiledFunction changes
+  const gridPoints = useMemo(() => {
+    if (!compiledFunction) return null;
+    
+    const size = 15;
+    const range = 2;
+    const x = Array.from({ length: size }, (_, i) => -range + (i * (range * 2)) / (size - 1));
+    const y = Array.from({ length: size }, (_, i) => -range + (i * (range * 2)) / (size - 1));
+    
+    const startPoints: { x: number, y: number }[][] = [];
+    const endPoints: { x: number, y: number }[][] = [];
+
+    for (let i = 0; i < size; i++) {
+      startPoints[i] = [];
+      endPoints[i] = [];
+      for (let j = 0; j < size; j++) {
+        const xVal = x[j];
+        const yVal = y[i];
+        const scope = { x: xVal, y: yVal, i: math.complex(0, 1) };
+        
+        startPoints[i][j] = { x: xVal, y: yVal };
+        
+        try {
+          const val = compiledFunction.evaluate(scope);
+          endPoints[i][j] = {
+            x: val.re ?? val,
+            y: val.im ?? 0
+          };
+        } catch (e) {
+          endPoints[i][j] = { x: xVal, y: yVal };
+        }
+      }
+    }
+    
+    return { startPoints, endPoints, size };
+  }, [compiledFunction]);
+
+  const generateTraces = (t: number) => {
+    if (!gridPoints) return [];
+    
+    const { startPoints, endPoints, size } = gridPoints;
+    const traces: any[] = [];
+
+    // Horizontal lines
+    for (let i = 0; i < size; i++) {
+      const lineX: number[] = [];
+      const lineY: number[] = [];
+      for (let j = 0; j < size; j++) {
+        const start = startPoints[i][j];
+        const end = endPoints[i][j];
+        lineX.push((1 - t) * start.x + t * end.x);
+        lineY.push((1 - t) * start.y + t * end.y);
+      }
+      traces.push({
+        x: lineX, y: lineY,
+        type: 'scatter', mode: 'lines',
+        line: { color: 'rgba(79, 70, 229, 0.4)', width: 1 },
+        showlegend: false, hoverinfo: 'none'
+      });
+    }
+
+    // Vertical lines
+    for (let j = 0; j < size; j++) {
+      const lineX: number[] = [];
+      const lineY: number[] = [];
+      for (let i = 0; i < size; i++) {
+        const start = startPoints[i][j];
+        const end = endPoints[i][j];
+        lineX.push((1 - t) * start.x + t * end.x);
+        lineY.push((1 - t) * start.y + t * end.y);
+      }
+      traces.push({
+        x: lineX, y: lineY,
+        type: 'scatter', mode: 'lines',
+        line: { color: 'rgba(16, 185, 129, 0.4)', width: 1 },
+        showlegend: false, hoverinfo: 'none'
+      });
     }
     return traces;
   };
 
-  const zPlaneData = useMemo(() => generateGrid(0), [functionStr]);
-  const wPlaneData = useMemo(() => generateGrid(1), [functionStr]);
-  const animatedData = useMemo(() => generateGrid(progress), [functionStr, progress]);
+  const zPlaneData = useMemo(() => generateTraces(0), [gridPoints]);
+  const wPlaneData = useMemo(() => generateTraces(1), [gridPoints]);
+  const animatedData = useMemo(() => generateTraces(progress), [gridPoints, progress]);
+
+  const commonLayout = useMemo(() => ({
+    autosize: true, margin: { l: 20, r: 20, b: 20, t: 20 },
+    xaxis: { range: [-3, 3], gridcolor: '#f1f5f9', zerolinecolor: '#e2e8f0', fixedrange: true },
+    yaxis: { range: [-3, 3], gridcolor: '#f1f5f9', zerolinecolor: '#e2e8f0', fixedrange: true },
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+  }), []);
 
   return (
     <div className="space-y-6">
@@ -106,12 +158,7 @@ const TransformationVisualizer: React.FC<TransformationVisualizerProps> = ({ fun
           </div>
           <Plot
             data={zPlaneData}
-            layout={{
-              autosize: true, margin: { l: 20, r: 20, b: 20, t: 20 },
-              xaxis: { range: [-3, 3], gridcolor: '#f1f5f9', zerolinecolor: '#e2e8f0' },
-              yaxis: { range: [-3, 3], gridcolor: '#f1f5f9', zerolinecolor: '#e2e8f0' },
-              paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-            }}
+            layout={commonLayout}
             config={{ displayModeBar: false, responsive: true }}
             className="w-full h-[250px]"
           />
@@ -136,6 +183,7 @@ const TransformationVisualizer: React.FC<TransformationVisualizerProps> = ({ fun
             <motion.div 
               className="h-full bg-white"
               animate={{ width: `${progress * 100}%` }}
+              transition={{ duration: 0 }}
             />
           </div>
 
@@ -154,12 +202,7 @@ const TransformationVisualizer: React.FC<TransformationVisualizerProps> = ({ fun
           </div>
           <Plot
             data={wPlaneData}
-            layout={{
-              autosize: true, margin: { l: 20, r: 20, b: 20, t: 20 },
-              xaxis: { range: [-3, 3], gridcolor: '#f1f5f9', zerolinecolor: '#e2e8f0' },
-              yaxis: { range: [-3, 3], gridcolor: '#f1f5f9', zerolinecolor: '#e2e8f0' },
-              paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-            }}
+            layout={commonLayout}
             config={{ displayModeBar: false, responsive: true }}
             className="w-full h-[250px]"
           />
@@ -172,11 +215,11 @@ const TransformationVisualizer: React.FC<TransformationVisualizerProps> = ({ fun
         <Plot
           data={animatedData}
           layout={{
-            autosize: true, margin: { l: 40, r: 40, b: 40, t: 40 },
-            xaxis: { range: [-4, 4], gridcolor: '#f1f5f9', zerolinecolor: '#e2e8f0' },
-            yaxis: { range: [-4, 4], gridcolor: '#f1f5f9', zerolinecolor: '#e2e8f0' },
-            paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+            ...commonLayout,
+            xaxis: { ...commonLayout.xaxis, range: [-4, 4] },
+            yaxis: { ...commonLayout.yaxis, range: [-4, 4] },
           }}
+          revision={revision}
           config={{ displayModeBar: false, responsive: true }}
           className="w-full h-[500px]"
         />
