@@ -21,6 +21,7 @@ import LearningMode from './components/LearningMode';
 import AnimationLab from './components/AnimationLab';
 import TransformationVisualizer from './components/TransformationVisualizer';
 import CRVisualizer from './components/CRVisualizer';
+import ConformalLab from './components/ConformalLab';
 import StepByStepAnimation from './components/StepByStepAnimation';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -42,7 +43,7 @@ const TOOLTIPS = {
 export default function App() {
   const [input, setInput] = useState("z^2");
   const [result, setResult] = useState<AnalyticityResult | null>(null);
-  const [activeTab, setActiveTab] = useState<'checker' | 'learning' | 'challenge' | 'animation' | 'conformal'>('checker');
+  const [activeTab, setActiveTab] = useState<'checker' | 'learning' | 'challenge' | 'animation' | 'conformal' | 'conformal-lab'>('checker');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<number[]>([0, 4]); // Default expand substitution and conclusion
   
@@ -111,7 +112,8 @@ export default function App() {
             {[
               { id: 'checker', icon: Calculator, label: 'Analysis' },
               { id: 'animation', icon: Sparkles, label: 'Mapping' },
-              { id: 'conformal', icon: Target, label: 'Conformal' },
+              { id: 'conformal', icon: Target, label: 'Geometry' },
+              { id: 'conformal-lab', icon: Sparkles, label: 'Conformal Lab' },
               { id: 'learning', icon: BookOpen, label: 'Theory' },
               { id: 'challenge', icon: Trophy, label: 'Challenge' }
             ].map((tab) => (
@@ -270,6 +272,17 @@ export default function App() {
               exit={{ opacity: 0, y: -20 }}
             >
               <CRVisualizer functionStr={input} />
+            </motion.div>
+          )}
+
+          {activeTab === 'conformal-lab' && (
+            <motion.div
+              key="conformal-lab"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+            >
+              <ConformalLab functionStr={input} />
             </motion.div>
           )}
 
