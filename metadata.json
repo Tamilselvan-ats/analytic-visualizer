@@ -1,0 +1,5 @@
+{
+  "name": "Complex Analytic Explorer",
+  "description": "An interactive tool to learn and verify complex function analyticity using Cauchy-Riemann equations and 3D visualizations.",
+  "requestFramePermissions": []
+}
