@@ -13,7 +13,8 @@ import {
   ChevronDown,
   Trophy,
   Target,
-  Sparkles
+  Sparkles,
+  HelpCircle
 } from 'lucide-react';
 import { analyzeAnalyticity, AnalyticityResult } from './services/mathEngine';
 import Visualizer from './components/Visualizer';
@@ -22,6 +23,7 @@ import AnimationLab from './components/AnimationLab';
 import TransformationVisualizer from './components/TransformationVisualizer';
 import CRVisualizer from './components/CRVisualizer';
 import ConformalLab from './components/ConformalLab';
+import StepByStepGuide from './components/StepByStepGuide';
 import StepByStepAnimation from './components/StepByStepAnimation';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -43,7 +45,7 @@ const TOOLTIPS = {
 export default function App() {
   const [input, setInput] = useState("z^2");
   const [result, setResult] = useState<AnalyticityResult | null>(null);
-  const [activeTab, setActiveTab] = useState<'checker' | 'learning' | 'challenge' | 'animation' | 'conformal' | 'conformal-lab'>('checker');
+  const [activeTab, setActiveTab] = useState<'checker' | 'learning' | 'challenge' | 'animation' | 'conformal' | 'conformal-lab' | 'guide'>('checker');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<number[]>([0, 4]); // Default expand substitution and conclusion
   
@@ -114,7 +116,8 @@ export default function App() {
               { id: 'animation', icon: Sparkles, label: 'Mapping' },
               { id: 'conformal', icon: Target, label: 'Geometry' },
               { id: 'conformal-lab', icon: Sparkles, label: 'Conformal Lab' },
-              { id: 'learning', icon: BookOpen, label: 'Theory' },
+              { id: 'guide', icon: BookOpen, label: 'Step-by-Step' },
+              { id: 'learning', icon: HelpCircle, label: 'Quiz' },
               { id: 'challenge', icon: Trophy, label: 'Challenge' }
             ].map((tab) => (
               <button
@@ -283,6 +286,17 @@ export default function App() {
               exit={{ opacity: 0, scale: 0.98 }}
             >
               <ConformalLab functionStr={input} />
+            </motion.div>
+          )}
+
+          {activeTab === 'guide' && (
+            <motion.div
+              key="guide"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <StepByStepGuide functionStr={input} />
             </motion.div>
           )}
 
