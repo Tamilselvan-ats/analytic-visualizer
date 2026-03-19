@@ -23,6 +23,7 @@ import AnimationLab from './components/AnimationLab';
 import TransformationVisualizer from './components/TransformationVisualizer';
 import CRVisualizer from './components/CRVisualizer';
 import ConformalLab from './components/ConformalLab';
+import AnalyticitySolver from './components/AnalyticitySolver';
 import StepByStepGuide from './components/StepByStepGuide';
 import StepByStepAnimation from './components/StepByStepAnimation';
 import { clsx, type ClassValue } from 'clsx';
@@ -45,7 +46,7 @@ const TOOLTIPS = {
 export default function App() {
   const [input, setInput] = useState("z^2");
   const [result, setResult] = useState<AnalyticityResult | null>(null);
-  const [activeTab, setActiveTab] = useState<'checker' | 'learning' | 'challenge' | 'animation' | 'conformal' | 'conformal-lab' | 'guide'>('checker');
+  const [activeTab, setActiveTab] = useState<'checker' | 'learning' | 'challenge' | 'animation' | 'conformal' | 'conformal-lab' | 'guide' | 'solver'>('checker');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<number[]>([0, 4]); // Default expand substitution and conclusion
   
@@ -113,6 +114,7 @@ export default function App() {
           <nav className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/50">
             {[
               { id: 'checker', icon: Calculator, label: 'Analysis' },
+              { id: 'solver', icon: Zap, label: 'Solver' },
               { id: 'animation', icon: Sparkles, label: 'Mapping' },
               { id: 'conformal', icon: Target, label: 'Geometry' },
               { id: 'conformal-lab', icon: Sparkles, label: 'Conformal Lab' },
@@ -240,6 +242,17 @@ export default function App() {
                   </div>
                 </section>
               </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'solver' && (
+            <motion.div
+              key="solver"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <AnalyticitySolver initialFunction={input} />
             </motion.div>
           )}
 
