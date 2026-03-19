@@ -55,10 +55,19 @@ const AnalyticitySolver: React.FC<{ initialFunction?: string }> = ({ initialFunc
   const gridData = useMemo(() => {
     if (result.error) return null;
     
+    // Safety check: prevent excessive computation
+    const xRange = domain.maxX - domain.minX;
+    const yRange = domain.maxY - domain.minY;
+    const safeStep = Math.max(domain.step, 0.05); // Enforce minimum step size
+    
+    if (xRange / safeStep > 100 || yRange / safeStep > 100) {
+      return null; // Too many lines, skip rendering to prevent crash
+    }
+
     const lines: { type: 'h' | 'v', points: { x: number, y: number, u: number, v: number }[] }[] = [];
     
     // Vertical lines (constant x)
-    for (let x = domain.minX; x <= domain.maxX; x += domain.step) {
+    for (let x = domain.minX; x <= domain.maxX; x += safeStep) {
       const points = [];
       for (let y = domain.minY; y <= domain.maxY; y += 0.1) {
         const u = evaluateFunction(result.u, x, y);
@@ -69,7 +78,7 @@ const AnalyticitySolver: React.FC<{ initialFunction?: string }> = ({ initialFunc
     }
     
     // Horizontal lines (constant y)
-    for (let y = domain.minY; y <= domain.maxY; y += domain.step) {
+    for (let y = domain.minY; y <= domain.maxY; y += safeStep) {
       const points = [];
       for (let x = domain.minX; x <= domain.maxX; x += 0.1) {
         const u = evaluateFunction(result.u, x, y);
@@ -117,36 +126,45 @@ const AnalyticitySolver: React.FC<{ initialFunction?: string }> = ({ initialFunc
     const scaleV = (val: number) => height - (padding + ((val - minV) / (maxV - minV)) * (height - 2 * padding));
 
     return (
-      <svg width={width} height={height} className="bg-slate-900/50 rounded-2xl border border-white/10 shadow-inner">
-        {/* Grid Lines */}
-        {gridData.map((line, i) => {
-          const pathData = line.points.map((p, j) => {
-            const px = plane === 'z' ? scaleX(p.x) : scaleU(p.u);
-            const py = plane === 'z' ? scaleY(p.y) : scaleV(p.v);
-            return `${j === 0 ? 'M' : 'L'} ${px} ${py}`;
-          }).join(' ');
+      <div className="relative">
+        <svg width={width} height={height} className="bg-slate-900/50 rounded-2xl border border-white/10 shadow-inner">
+          {/* Grid Lines */}
+          {gridData.map((line, i) => {
+            const pathData = line.points.map((p, j) => {
+              const px = plane === 'z' ? scaleX(p.x) : scaleU(p.u);
+              const py = plane === 'z' ? scaleY(p.y) : scaleV(p.v);
+              return `${j === 0 ? 'M' : 'L'} ${px} ${py}`;
+            }).join(' ');
+            
+            return (
+              <path 
+                key={i} 
+                d={pathData} 
+                fill="none" 
+                stroke={line.type === 'v' ? 'rgba(99, 102, 241, 0.6)' : 'rgba(16, 185, 129, 0.6)'} 
+                strokeWidth="1.5"
+                className="transition-all duration-700 ease-in-out"
+              />
+            );
+          })}
           
-          return (
-            <path 
-              key={i} 
-              d={pathData} 
-              fill="none" 
-              stroke={line.type === 'v' ? 'rgba(99, 102, 241, 0.6)' : 'rgba(16, 185, 129, 0.6)'} 
-              strokeWidth="1.5"
-              className="transition-all duration-700 ease-in-out"
-            />
-          );
-        })}
-        
-        {/* Origin Marker */}
-        <circle 
-          cx={plane === 'z' ? scaleX(0) : scaleU(evaluateFunction(result.u, 0, 0))} 
-          cy={plane === 'z' ? scaleY(0) : scaleV(evaluateFunction(result.v, 0, 0))} 
-          r="4" 
-          fill="#f59e0b" 
-          className="animate-pulse"
-        />
-      </svg>
+          {/* Origin Marker */}
+          <circle 
+            cx={plane === 'z' ? scaleX(0) : scaleU(evaluateFunction(result.u, 0, 0))} 
+            cy={plane === 'z' ? scaleY(0) : scaleV(evaluateFunction(result.v, 0, 0))} 
+            r="4" 
+            fill="#f59e0b" 
+            className="animate-pulse"
+          />
+        </svg>
+        {!gridData && (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 rounded-2xl p-6 text-center">
+            <p className="text-xs font-bold text-rose-400 uppercase tracking-widest">
+              Grid too dense to render safely.<br/>Increase step size.
+            </p>
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -264,8 +282,15 @@ const AnalyticitySolver: React.FC<{ initialFunction?: string }> = ({ initialFunc
                       <input type="number" value={domain.maxY} onChange={e => setDomain({...domain, maxY: Number(e.target.value)})} className="w-full p-2 rounded-lg border border-slate-200 text-sm" />
                     </div>
                     <div className="col-span-2 space-y-1">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Grid Step Size</label>
-                      <input type="number" step="0.1" value={domain.step} onChange={e => setDomain({...domain, step: Number(e.target.value)})} className="w-full p-2 rounded-lg border border-slate-200 text-sm" />
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Grid Step Size (Min 0.05)</label>
+                      <input 
+                        type="number" 
+                        step="0.1" 
+                        min="0.05"
+                        value={domain.step} 
+                        onChange={e => setDomain({...domain, step: Math.max(Number(e.target.value), 0.05)})} 
+                        className="w-full p-2 rounded-lg border border-slate-200 text-sm" 
+                      />
                     </div>
                   </div>
                 </motion.div>
