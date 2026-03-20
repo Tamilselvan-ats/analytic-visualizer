@@ -298,7 +298,7 @@ export default function App() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
             >
-              <ConformalLab functionStr={input} />
+              <ConformalLab />
             </motion.div>
           )}
 

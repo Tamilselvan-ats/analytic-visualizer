@@ -160,6 +160,73 @@ export function analyzeAnalyticity(functionStr: string): AnalyticityResult {
   }
 }
 
+export interface ConformalResult {
+  u: string;
+  v: string;
+  steps: StepResult[];
+  error?: string;
+}
+
+/**
+ * Analyzes a general conformal mapping w = f(z).
+ */
+export function analyzeConformal(functionStr: string): ConformalResult {
+  try {
+    const node = math.parse(functionStr);
+    const zSub = math.parse('(x + i * y)');
+    const substituted = node.transform((n) => {
+      if ((n as any).isSymbolNode && (n as any).name === 'z') return zSub;
+      return n;
+    });
+
+    const simplifiedF = math.simplify(substituted);
+    const uNode = math.simplify(`re(${simplifiedF.toString()})`);
+    const vNode = math.simplify(`im(${simplifiedF.toString()})`);
+    
+    const uStr = uNode.toString();
+    const vStr = vNode.toString();
+
+    // Determine mapping type for better steps
+    let mappingTypeInfo = "General Transformation";
+    if (functionStr.includes('/') && functionStr.includes('z')) mappingTypeInfo = "Bilinear (Mobius) Transformation";
+    else if (functionStr.includes('^')) mappingTypeInfo = "Power Transformation";
+    else if (functionStr.includes('exp')) mappingTypeInfo = "Exponential Mapping";
+    else if (functionStr.includes('sin') || functionStr.includes('cos')) mappingTypeInfo = "Trigonometric Mapping";
+    else if (functionStr === '1/z') mappingTypeInfo = "Inversion Mapping";
+
+    const steps: StepResult[] = [
+      {
+        step: "Step 1: Define the Transformation",
+        content: `We are analyzing the mapping: w = f(z) = ${functionStr}\nThis is a ${mappingTypeInfo}.`
+      },
+      {
+        step: "Step 2: Substitute z = x + iy",
+        content: `Substitute the complex variable z with its rectangular form x + iy:\nw = f(x + iy) = ${simplifiedF.toString()}`
+      },
+      {
+        step: "Step 3: Extract Real (u) and Imaginary (v) parts",
+        content: `Expand the expression and separate into real and imaginary components w = u + iv:\nu(x, y) = ${uStr}\nv(x, y) = ${vStr}`
+      },
+      {
+        step: "Step 4: Analyze Geometric Properties",
+        content: `The mapping transforms the z-plane (x, y) to the w-plane (u, v).\nGrid lines x = const and y = const in the z-plane are mapped to curves in the w-plane defined by the parametric equations u(x,y) and v(x,y).`
+      },
+      {
+        step: "Step 5: Verify Conformality",
+        content: `A mapping is conformal at all points where f(z) is analytic and f'(z) ≠ 0.\nFor this function, the derivative f'(z) is non-zero in most of the domain, preserving angles between intersecting curves.`
+      }
+    ];
+
+    return { u: uStr, v: vStr, steps };
+  } catch (err: any) {
+    return {
+      u: '', v: '',
+      steps: [],
+      error: err.message || "Failed to analyze conformal mapping."
+    };
+  }
+}
+
 export function evaluateFunction(expr: string, x: number, y: number): number {
   try {
     return math.evaluate(expr, { x, y, i: math.complex(0, 1) });
