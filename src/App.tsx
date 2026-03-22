@@ -14,7 +14,11 @@ import {
   Trophy,
   Target,
   Sparkles,
-  HelpCircle
+  HelpCircle,
+  Activity,
+  FlaskConical,
+  ScrollText,
+  GraduationCap
 } from 'lucide-react';
 import { analyzeAnalyticity, AnalyticityResult } from './services/mathEngine';
 import Visualizer from './components/Visualizer';
@@ -26,6 +30,7 @@ import ConformalLab from './components/ConformalLab';
 import AnalyticitySolver from './components/AnalyticitySolver';
 import StepByStepGuide from './components/StepByStepGuide';
 import StepByStepAnimation from './components/StepByStepAnimation';
+import TheorySection, { MilneThomsonSolver, CREquations, ConformalMappingTheory } from './components/TheorySection';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -46,7 +51,7 @@ const TOOLTIPS = {
 export default function App() {
   const [input, setInput] = useState("z^2");
   const [result, setResult] = useState<AnalyticityResult | null>(null);
-  const [activeTab, setActiveTab] = useState<'checker' | 'learning' | 'challenge' | 'animation' | 'conformal' | 'conformal-lab' | 'guide' | 'solver'>('checker');
+  const [activeTab, setActiveTab] = useState<'checker' | 'learning' | 'challenge' | 'animation' | 'conformal' | 'conformal-lab' | 'guide' | 'solver' | 'milne-thomson' | 'theory'>('checker');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<number[]>([0, 4]); // Default expand substitution and conclusion
   
@@ -113,12 +118,14 @@ export default function App() {
 
           <nav className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/50">
             {[
-              { id: 'checker', icon: Calculator, label: 'Analysis' },
+              { id: 'checker', icon: Activity, label: 'Analysis' },
               { id: 'solver', icon: Zap, label: 'Solver' },
               { id: 'animation', icon: Sparkles, label: 'Mapping' },
               { id: 'conformal', icon: Target, label: 'Geometry' },
-              { id: 'conformal-lab', icon: Sparkles, label: 'Conformal Lab' },
-              { id: 'guide', icon: BookOpen, label: 'Step-by-Step' },
+              { id: 'conformal-lab', icon: FlaskConical, label: 'Conformal Lab' },
+              { id: 'theory', icon: BookOpen, label: 'Theory' },
+              { id: 'milne-thomson', icon: Calculator, label: 'Milne-Thomson' },
+              { id: 'guide', icon: ScrollText, label: 'Step-by-Step' },
               { id: 'learning', icon: HelpCircle, label: 'Quiz' },
               { id: 'challenge', icon: Trophy, label: 'Challenge' }
             ].map((tab) => (
@@ -299,6 +306,46 @@ export default function App() {
               exit={{ opacity: 0, scale: 0.98 }}
             >
               <ConformalLab />
+            </motion.div>
+          )}
+
+          {activeTab === 'theory' && (
+            <motion.div
+              key="theory"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="max-w-4xl mx-auto space-y-12"
+            >
+              <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-200">
+                <h2 className="text-3xl font-black text-slate-800 mb-8 flex items-center gap-3">
+                  <BookOpen className="w-8 h-8 text-indigo-600" />
+                  Complex Analysis Theory
+                </h2>
+                <div className="space-y-16">
+                  <section>
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Part 1: Cauchy-Riemann Equations</h3>
+                    <CREquations />
+                  </section>
+                  <div className="h-px bg-slate-100" />
+                  <section>
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Part 2: Conformal Mappings</h3>
+                    <ConformalMappingTheory />
+                  </section>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'milne-thomson' && (
+            <motion.div
+              key="milne-thomson"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="max-w-4xl mx-auto"
+            >
+              <MilneThomsonSolver />
             </motion.div>
           )}
 

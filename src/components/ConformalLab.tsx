@@ -19,6 +19,7 @@ import {
 import { analyzeConformal, evaluateFunction } from '../services/mathEngine';
 import Complex2DVisualizer from './Complex2DVisualizer';
 import Complex3DVisualizer from './Complex3DVisualizer';
+import TheorySection from './TheorySection';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -88,6 +89,7 @@ const ConformalLab: React.FC = () => {
 
   const [showSettings, setShowSettings] = useState(false);
   const [showSteps, setShowSteps] = useState(true);
+  const [showTheory, setShowTheory] = useState(false);
   const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
 
   const currentFunction = useMemo(() => {
@@ -174,19 +176,28 @@ const ConformalLab: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 bg-slate-100/80 p-2 rounded-3xl border border-slate-200/60 backdrop-blur-sm">
-            {(['linear', 'bilinear', 'power', 'exponential', 'trigonometric', 'inversion', 'custom'] as MappingType[]).map((type) => (
-              <button
-                key={type}
-                onClick={() => setMappingType(type)}
-                className={cn(
-                  "px-5 py-2.5 rounded-2xl text-[11px] font-black tracking-widest transition-all uppercase",
-                  mappingType === type ? "bg-white text-indigo-600 shadow-md scale-105" : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
-                )}
-              >
-                {type}
-              </button>
-            ))}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowTheory(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-indigo-50 text-indigo-600 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-100 transition-all border border-indigo-100 shadow-sm"
+            >
+              <BookOpen className="w-4 h-4" />
+              Theory & Solvers
+            </button>
+            <div className="flex flex-wrap gap-2 bg-slate-100/80 p-2 rounded-3xl border border-slate-200/60 backdrop-blur-sm">
+              {(['linear', 'bilinear', 'power', 'exponential', 'trigonometric', 'inversion', 'custom'] as MappingType[]).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setMappingType(type)}
+                  className={cn(
+                    "px-5 py-2.5 rounded-2xl text-[11px] font-black tracking-widest transition-all uppercase",
+                    mappingType === type ? "bg-white text-indigo-600 shadow-md scale-105" : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+                  )}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -427,6 +438,10 @@ const ConformalLab: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showTheory && <TheorySection onClose={() => setShowTheory(false)} />}
+      </AnimatePresence>
 
       {/* Main Analysis Section */}
       <div className="space-y-12">
